@@ -1,5 +1,5 @@
 <?php include 'includes/session.php'; ?>
-<?php include 'includes/header.php'; ?>
+<?php include 'includes/header.php'; ?> 
 <body class="hold-transition skin-purple-light sidebar-mini">
 <div class="wrapper">
 
@@ -97,11 +97,12 @@
       </div>
     </section>   
   </div>
-    
+  
   <?php include 'includes/footer.php'; ?>
   <?php include 'includes/employee_schedule_modal.php'; ?>
 </div>
 <?php include 'includes/scripts.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 $(function(){
   $('.edit').click(function(e){
@@ -112,7 +113,6 @@ $(function(){
   });
 });
 
-
 function getRow(id){
   $.ajax({
     type: 'POST',
@@ -120,7 +120,6 @@ function getRow(id){
     data: {id:id},
     dataType: 'json',
     success: function(response){
-      
       $('.employee_name').html(response.firstname+' '+response.lastname);
       $('#schedule_val').val(response.schedule_id);
       $('#employee_val').val(response.employee_id);
@@ -132,6 +131,74 @@ function getRow(id){
       $('#position_valv2').val(response.description);
       $('#negocio_valv2').val(response.nombre_negocio);
       $('#num_hr').val(response.num_hr);
+      
+      // Obtener la suma total de horas de trabajo del empleado
+      $.ajax({
+        type: 'POST',
+        url: 'get_total_hours.php',
+        data: { employee_id: response.empid },
+        dataType: 'json',
+        success: function (hoursResponse) {
+          $('#sum_num_hr').val(hoursResponse.total_hours);
+        }
+      });
+      $.ajax({
+        type: 'POST',
+        url: 'get_cantidad_asistencia.php',
+        data: { employee_id: response.empid },
+        dataType: 'json',
+        success: function (assistanceResponse) {
+          $('#dias_trabajados').val(assistanceResponse.cantidad_asistencia);
+        }
+      });
+      $.ajax({
+        type: 'POST',
+        url: 'get_cantidad_faltas.php',
+        data: { employee_id: response.empid },
+        dataType: 'json',
+        success: function (foulsResponse) {
+          $('#dias_faltados').val(foulsResponse.cantidad_faltas);
+        }
+      });
+      $.ajax({
+        type: 'POST',
+        url: 'get_cantidad_tardanzas.php',
+        data: { employee_id: response.empid },
+        dataType: 'json',
+        success: function (tardiesResponse) {
+          $('#dias_tardados').val(tardiesResponse.cantidad_tardanzas);
+        }
+      });
+      function generateChart(data) {
+        // Aquí puedes utilizar la biblioteca Chart.js para generar el gráfico basado en los datos del empleado
+        // Puedes acceder a los datos específicos del empleado, como la cantidad de días trabajados, faltados, etc., a través del objeto 'data'
+        // Por ejemplo:
+        const diasTrabajados = parseInt(data.dias_trabajados);
+        const diasFaltados = parseInt(data.dias_faltados);
+        const diasTardados = parseInt(data.dias_tardados);
+
+        // Luego, puedes generar el gráfico utilizando los datos
+        const ctx = document.getElementById('myChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Faltas', 'Asistencias', 'Tardanzas'],
+            datasets: [{
+              label: 'Días',
+              data: [diasFaltados, diasTrabajados, diasTardados],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+      
     }
   });
 }
@@ -150,6 +217,38 @@ $(function() {
     showProfileImage(photo);
     getRow(id);
   });
+});
+
+$('#edit').on('shown.bs.modal', function() {
+    const diasTrabajados = parseInt(document.getElementById('dias_trabajados').value);
+    const diasFaltados = parseInt(document.getElementById('dias_faltados').value);
+    const diasTardados = parseInt(document.getElementById('dias_tardados').value);
+
+    var myChart = Chart.getChart('myChart');
+    if (myChart) {
+      myChart.destroy();
+    }
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+    
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Faltas', 'Asistencias', 'Tardanzas'],
+        datasets: [{
+          label: 'Días',
+          data: [diasFaltados, diasTrabajados, diasTardados],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
 });
 
 </script>
